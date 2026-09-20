@@ -56,13 +56,27 @@
         .record-card:hover {
             transform: translateY(-3px);
         }
+        .card-header-flex {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+        }
+        .avatar-img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-color);
+            background: #dfe6e9;
+        }
         .record-card h3 {
-            margin-top: 0;
+            margin: 0 0 4px 0;
             color: #e17055;
-            font-size: 20px;
+            font-size: 18px;
         }
         .record-card p {
-            margin: 8px 0;
+            margin: 6px 0;
             font-size: 14px;
         }
         /* 情侶配對群組與分隔線 */
@@ -304,8 +318,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label>User ID (系統帳號)</label>
-                    <input type="text" id="userId" required placeholder="例如：UID-1234">
+                    <label>Instagram Account ID (用於自動抓取頭相)</label>
+                    <input type="text" id="userId" required placeholder="例如：instagram (唔洗加 @)">
                 </div>
 
                 <div class="form-group">
@@ -339,8 +353,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label>現任 USER ID（冇就留空，有就會自動幫你連埋一齊）</label>
-                    <input type="text" id="currentUserId" placeholder="輸入現任 User ID">
+                    <label>現任 IG ID（冇就留空，有就會自動幫你連埋一齊）</label>
+                    <input type="text" id="currentUserId" placeholder="輸入現任 IG Account ID">
                 </div>
 
                 <div class="form-group">
@@ -358,8 +372,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label>前任 USER ID</label>
-                    <input type="text" id="formerUserId" placeholder="輸入前任 User ID">
+                    <label>前任 IG ID</label>
+                    <input type="text" id="formerUserId" placeholder="輸入前任 IG Account ID">
                 </div>
 
                 <!-- 額外自訂資訊行 -->
@@ -540,13 +554,13 @@
         
         let allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
 
-        // 如果填咗現任 User ID 但搵唔到，自動幫手建立吉嘅記錄
+        // 如果填咗現任 IG ID 但搵唔到，自動幫手建立吉嘅記錄
         if(currentIdRef) {
             let targetCurrent = allRecords.find(r => r.userId === currentIdRef);
             if(!targetCurrent) {
                 allRecords.push({
                     keyId: 'KEY-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-                    userName: '系統自動連線用戶',
+                    userName: currentIdRef,
                     userId: currentIdRef,
                     realName: '未填',
                     autoCreated: true
@@ -594,10 +608,16 @@
         renderMainPage();
     }
 
-    // 生成卡片 HTML
+    // 生成卡片 HTML (自動串接 IG 頭相)
     function createCardHtml(r) {
         const ageText = getAgeText(r.ageMode, r.ageNumber, r.birthDate);
         const coupleText = getCoupleTimeText(r.coupleMode, r.coupleYears, r.coupleDate);
+        
+        // 利用公開代理或者 fallback 預設頭相去自動顯示 IG 大頭貼
+        // 註：若用戶帳號有效，會自動透過拉取公共解析源顯示頭相
+        const igAvatarUrl = r.userId ? `https://images.weserv.nl/?url=https://www.instagram.com/${r.userId}/channel/?__a=1` : ''; 
+        // 為了確保前端穩定顯示，這裡使用一套公開嘅 IG 頭相代理 API 規則
+        const avatarDisplayUrl = r.userId ? `https://unavatar.io/instagram/${r.userId}` : 'https://via.placeholder.com/60?text=IG';
 
         let customHtml = '';
         if(r.customFields && r.customFields.length > 0) {
@@ -608,14 +628,20 @@
 
         return `
             <div class="record-card" onclick="openEditModal('${r.keyId}')">
-                <h3>👤 ${r.userName} (ID: ${r.userId}) ${r.autoCreated ? '<span style="color:#ff7675; font-size:12px;">[自動建立]</span>' : ''}</h3>
+                <div class="card-header-flex">
+                    <img src="${avatarDisplayUrl}" class="avatar-img" alt="Avatar" onerror="this.src='https://via.placeholder.com/60?text=IG'">
+                    <div>
+                        <h3>👤 ${r.userName}</h3>
+                        <p style="margin: 0; font-size: 13px; color: #e17055;">IG ID: @${r.userId} ${r.autoCreated ? '<span style="color:#ff7675; font-size:11px;">[自動建立]</span>' : ''}</p>
+                    </div>
+                </div>
                 <p><strong>🔑 Key ID：</strong> ${r.keyId}</p>
                 <p><strong>📛 真實姓名：</strong> ${r.realName || '未填'}</p>
                 <p><strong>👶 年齡：</strong> ${ageText}</p>
                 <p><strong>🌈 性向：</strong> ${r.sexuality || '未填'}</p>
-                <p><strong>❤️ 現任 User ID：</strong> ${r.currentUserId || '冇'}</p>
+                <p><strong>❤️ 現任 IG ID：</strong> ${r.currentUserId ? '@' + r.currentUserId : '冇'}</p>
                 <p><strong>🥰 拍拖狀態：</strong> ${coupleText}</p>
-                <p><strong>💔 前任 User ID：</strong> ${r.formerUserId || '冇'}</p>
+                <p><strong>💔 前任 IG ID：</strong> ${r.formerUserId ? '@' + r.formerUserId : '冇'}</p>
                 ${customHtml}
                 <p style="font-size: 11px; color: #b2bec3; text-align: right; margin-top: 10px;">(點擊卡片可進入編輯 ✏️)</p>
             </div>
@@ -631,7 +657,7 @@
             container.innerHTML = `
                 <div class="empty-state">
                     <h3>暫時未有任何記錄 📭</h3>
-                    <p>快啲襟右下角個「 + 」掣加入第一筆資料啦！</p>
+                    <p>快啲襟右下角個「 + 」掣加入第一筆 IG 資料啦！</p>
                 </div>
             `;
             return;
