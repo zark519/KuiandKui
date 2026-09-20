@@ -651,7 +651,7 @@
         `;
     }
 
-    // 主頁面展示記錄（雙向檢查現任並組合）
+    // 主頁面展示記錄（支援單向與雙向現任自動配對補位）
     function renderMainPage() {
         const container = document.getElementById('recordsContainer');
         const allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
@@ -673,9 +673,15 @@
             if(processedIds.has(r.keyId)) return;
 
             let partner = null;
-            // 檢查雙向現任配對：A 嘅 currentUserId 等於 B 嘅 userId，且 B 嘅 currentUserId 等於 A 嘅 userId
+
+            // 1. 先優先尋找雙向現任配對 (A 填咗 B，B 又填咗 A)
             if(r.currentUserId) {
                 partner = allRecords.find(p => p.userId === r.currentUserId && p.keyId !== r.keyId && p.currentUserId === r.userId);
+            }
+
+            // 2. 如果冇雙向，就支援單向補位：A 填咗 B 做現任，就算 B 冇填 A，都會自動當作一對顯示出嚟
+            if(!partner && r.currentUserId) {
+                partner = allRecords.find(p => p.userId === r.currentUserId && p.keyId !== r.keyId);
             }
 
             if(partner) {
