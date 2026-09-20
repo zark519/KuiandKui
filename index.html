@@ -31,6 +31,7 @@
             color: var(--primary-color);
             font-size: 26px;
             margin-bottom: 5px;
+            font-weight: bold;
         }
         .key-id-tag {
             background: #ffeaa7;
@@ -64,15 +65,16 @@
             flex-direction: column;
             gap: 4px;
         }
-        .record-card h3 {
-            margin: 0;
-            color: #e17055;
+        /* 取消粗體，改為普通字重 */
+        .card-line-1 {
             font-size: 16px;
+            color: #e17055;
+            font-weight: normal;
         }
-        .record-card p {
-            margin: 0;
+        .card-line-2 {
             font-size: 13px;
             color: #636e72;
+            font-weight: normal;
         }
         .delete-card-btn {
             background: #ff7675;
@@ -89,7 +91,7 @@
             opacity: 0.8;
         }
 
-        /* 情侶配對群組與明確分隔線 */
+        /* 情侶配對群組與中間嘅心心分隔線 */
         .couple-group {
             background: #fff;
             border-radius: 18px;
@@ -584,19 +586,6 @@
         
         let allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
 
-        if(currentIdRef) {
-            let targetCurrent = allRecords.find(r => r.userId === currentIdRef);
-            if(!targetCurrent) {
-                allRecords.push({
-                    keyId: 'KEY-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-                    userName: currentIdRef,
-                    userId: currentIdRef,
-                    realName: '',
-                    autoCreated: true
-                });
-            }
-        }
-
         let customFieldsList = [];
         document.querySelectorAll('.custom-row').forEach(row => {
             const nature = row.querySelector('.custom-nature').value.trim();
@@ -637,31 +626,32 @@
         renderMainPage();
     }
 
-    // 主頁卡片 HTML，格式嚴格遵從：User Name (User ID) | real name (if any) | age (if any) | current couple
+    // 主頁卡片 HTML 產生器：第一行 User Name (User ID)，第二行 real name | age (if any)
     function createCardHtml(r) {
+        const line1 = `${r.userName} (${r.userId})`;
+        
         const realNameStr = r.realName ? r.realName : '';
         const ageStr = getAgeText(r);
-        const coupleStr = r.currentUserId ? `現任: @${r.currentUserId}` : '';
 
-        // 組裝格式部件，只保留有填寫嘅欄位用 | 隔開
-        let parts = [`${r.userName} (@${r.userId})`];
-        if(realNameStr) parts.push(realNameStr);
-        if(ageStr) parts.push(ageStr);
-        if(coupleStr) parts.push(coupleStr);
+        let line2Parts = [];
+        if(realNameStr) line2Parts.push(realNameStr);
+        if(ageStr) line2Parts.push(ageStr);
+        const line2 = line2Parts.join(' | ');
 
-        const displayText = parts.join(' | ');
+        let line2Html = line2 ? `<div class="card-line-2">${line2}</div>` : '';
 
         return `
             <div class="record-card" onclick="openEditModal('${r.keyId}')">
                 <div class="card-left-info">
-                    <h3>👤 ${displayText}</h3>
+                    <div class="card-line-1">${line1}</div>
+                    ${line2Html}
                 </div>
                 <button class="delete-card-btn" onclick="deleteRecord('${r.keyId}', event)">刪除 🗑️</button>
             </div>
         `;
     }
 
-    // 主頁面展示記錄
+    // 主頁面展示記錄（雙向檢查現任並組合）
     function renderMainPage() {
         const container = document.getElementById('recordsContainer');
         const allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
@@ -670,7 +660,7 @@
             container.innerHTML = `
                 <div class="empty-state">
                     <h3>暫時未有任何記錄 📭</h3>
-                    <p>快啲襟右下角個「 + 」掣加入第一筆 IG 資料啦！</p>
+                    <p>快啲襟右下角個「 + 」掣加入第一筆資料啦！</p>
                 </div>
             `;
             return;
@@ -683,6 +673,7 @@
             if(processedIds.has(r.keyId)) return;
 
             let partner = null;
+            // 檢查雙向現任配對：A 嘅 currentUserId 等於 B 嘅 userId，且 B 嘅 currentUserId 等於 A 嘅 userId
             if(r.currentUserId) {
                 partner = allRecords.find(p => p.userId === r.currentUserId && p.keyId !== r.keyId && p.currentUserId === r.userId);
             }
