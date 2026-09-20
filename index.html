@@ -47,7 +47,7 @@
             border-radius: 16px;
             padding: 15px 20px;
             box-shadow: 0 8px 20px rgba(255, 118, 117, 0.15);
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             border: 2px dashed var(--secondary-color);
             position: relative;
             cursor: pointer;
@@ -61,19 +61,11 @@
         }
         .card-left-info {
             display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .avatar-img {
-            width: 55px;
-            height: 55px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--primary-color);
-            background: #dfe6e9;
+            flex-direction: column;
+            gap: 4px;
         }
         .record-card h3 {
-            margin: 0 0 4px 0;
+            margin: 0;
             color: #e17055;
             font-size: 18px;
         }
@@ -97,40 +89,42 @@
             opacity: 0.8;
         }
 
-        /* 情侶配對群組與分隔線 */
+        /* 情侶配對群組與明確分隔線 */
         .couple-group {
             background: #fff;
             border-radius: 18px;
-            padding: 10px;
+            padding: 15px;
             box-shadow: 0 6px 15px rgba(255, 118, 117, 0.1);
             margin-bottom: 20px;
             border: 2px solid var(--secondary-color);
         }
-        .couple-divider {
+        .couple-divider-line {
+            display: flex;
+            align-items: center;
             text-align: center;
-            margin: 10px 0;
-            position: relative;
-        }
-        .couple-divider::before {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 10px;
-            right: 10px;
-            height: 2px;
-            background: #fab1a0;
-            z-index: 1;
-        }
-        .couple-divider span {
-            background: #fff1f2;
-            padding: 4px 15px;
-            border-radius: 20px;
+            margin: 15px 0;
             color: #e17055;
             font-weight: bold;
             font-size: 13px;
-            position: relative;
-            z-index: 2;
-            border: 1px dashed var(--primary-color);
+        }
+        .couple-divider-line::before,
+        .couple-divider-line::after {
+            content: '';
+            flex: 1;
+            border-bottom: 2px dashed var(--primary-color);
+        }
+        .couple-divider-line:not(:empty)::before {
+            margin-right: 15px;
+        }
+        .couple-divider-line:not(:empty)::after {
+            margin-left: 15px;
+        }
+        .couple-divider-line span {
+            background: #ffeaa7;
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: #d63031;
+            border: 1px solid var(--primary-color);
         }
 
         .empty-state {
@@ -354,7 +348,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Instagram Account ID (用於自動抓取頭相)</label>
+                    <label>Instagram Account ID</label>
                     <input type="text" id="userId" required placeholder="例如：instagram (唔洗加 @)">
                 </div>
 
@@ -438,7 +432,7 @@
         document.getElementById('modalTitle').innerText = '📝 新增個人檔案';
         document.getElementById('profileForm').reset();
         document.getElementById('dynamicRowsContainer').innerHTML = '';
-        document.getElementById('modalDeleteBtn').style.display = 'none'; // 新增時隱藏刪除掣
+        document.getElementById('modalDeleteBtn').style.display = 'none';
         setSexuality('Gay');
         switchAgeInput('number');
         switchCoupleInput('years');
@@ -454,7 +448,7 @@
         currentKeyId = record.keyId;
         document.getElementById('displayKeyId').innerText = 'Key ID: ' + currentKeyId;
         document.getElementById('modalTitle').innerText = '✏️ 編輯個人檔案';
-        document.getElementById('modalDeleteBtn').style.display = 'block'; // 編輯時顯示刪除掣
+        document.getElementById('modalDeleteBtn').style.display = 'block';
 
         document.getElementById('userName').value = record.userName || '';
         document.getElementById('userId').value = record.userId || '';
@@ -462,7 +456,6 @@
         document.getElementById('currentUserId').value = record.currentUserId || '';
         document.getElementById('formerUserId').value = record.formerUserId || '';
 
-        //年齡或生日
         if(record.ageMode === 'date') {
             switchAgeInput('date');
             document.getElementById('birthDate').value = record.birthDate || '';
@@ -473,7 +466,6 @@
 
         setSexuality(record.sexuality || 'Gay');
 
-        //拍拖模式
         if(record.coupleMode === 'date') {
             switchCoupleInput('date');
             document.getElementById('coupleDateInput').value = record.coupleDate || '';
@@ -482,7 +474,6 @@
             document.getElementById('coupleYearsInput').value = record.coupleYears || '';
         }
 
-        // 自訂欄位
         const container = document.getElementById('dynamicRowsContainer');
         container.innerHTML = '';
         if(record.customFields && record.customFields.length > 0) {
@@ -500,7 +491,7 @@
 
     // 刪除指定記錄
     function deleteRecord(keyId, event) {
-        if(event) event.stopPropagation(); // 阻止觸發卡片嘅 onclick 編輯事件
+        if(event) event.stopPropagation();
         if(confirm('確定要刪除呢筆記錄嗎？')) {
             let allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
             allRecords = allRecords.filter(r => r.keyId !== keyId);
@@ -520,7 +511,6 @@
         }
     }
 
-    // 年齡輸入模式切換
     let ageMode = 'number';
     function switchAgeInput(mode) {
         ageMode = mode;
@@ -537,7 +527,6 @@
         }
     }
 
-    // 性向掣切換
     function setSexuality(val) {
         const btns = document.querySelectorAll('.form-group .btn-group .option-btn');
         btns.forEach(b => {
@@ -547,7 +536,6 @@
         document.getElementById('sexuality').value = val;
     }
 
-    // 情侶拍拖時間模式切換
     let coupleMode = 'years';
     function switchCoupleInput(mode) {
         coupleMode = mode;
@@ -564,7 +552,6 @@
         }
     }
 
-    // 動態新增欄位行
     function addCustomRow(nature = '', info = '') {
         const container = document.getElementById('dynamicRowsContainer');
         const row = document.createElement('div');
@@ -577,7 +564,6 @@
         container.appendChild(row);
     }
 
-    // 儲存資料
     function saveData(event) {
         event.preventDefault();
 
@@ -639,26 +625,20 @@
         renderMainPage();
     }
 
-    // 生成主頁卡片 HTML（只顯示 User Name、IG ID 同頭相，其餘隱藏，並附帶刪除掣）
+    // 主頁卡片 HTML（只顯示 User Name、IG ID，無頭相，無自動生成標記）
     function createCardHtml(r) {
-        // 使用更穩定的 unavatar 服務，若抓取失敗自動轉為預設頭相
-        const avatarDisplayUrl = r.userId ? `https://unavatar.io/instagram/${r.userId}` : 'https://via.placeholder.com/60?text=IG';
-
         return `
             <div class="record-card" onclick="openEditModal('${r.keyId}')">
                 <div class="card-left-info">
-                    <img src="${avatarDisplayUrl}" class="avatar-img" alt="Avatar" onerror="this.src='https://via.placeholder.com/60?text=IG'">
-                    <div>
-                        <h3>👤 ${r.userName}</h3>
-                        <p>IG ID: @${r.userId} ${r.autoCreated ? '<span style="color:#ff7675; font-size:11px;">[自動建立]</span>' : ''}</p>
-                    </div>
+                    <h3>👤 ${r.userName}</h3>
+                    <p>IG ID: @${r.userId}</p>
                 </div>
                 <button class="delete-card-btn" onclick="deleteRecord('${r.keyId}', event)">刪除 🗑️</button>
             </div>
         `;
     }
 
-    // 主頁面展示記錄（情侶互相對應自動拼埋一齊）
+    // 主頁面展示記錄
     function renderMainPage() {
         const container = document.getElementById('recordsContainer');
         const allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
@@ -679,26 +659,23 @@
         allRecords.forEach(r => {
             if(processedIds.has(r.keyId)) return;
 
-            // 檢查有冇互相連到嘅情侶
             let partner = null;
             if(r.currentUserId) {
                 partner = allRecords.find(p => p.userId === r.currentUserId && p.keyId !== r.keyId && p.currentUserId === r.userId);
             }
 
             if(partner) {
-                // 兩個人成雙成對，夾埋一齊顯示
                 processedIds.add(r.keyId);
                 processedIds.add(partner.keyId);
 
                 html += `
                     <div class="couple-group">
                         ${createCardHtml(r)}
-                        <div class="couple-divider"><span>💖 Sweet Couple 💖</span></div>
+                        <div class="couple-divider-line"><span>💖 Sweet Couple 💖</span></div>
                         ${createCardHtml(partner)}
                     </div>
                 `;
             } else {
-                // 單獨顯示
                 processedIds.add(r.keyId);
                 html += createCardHtml(r);
             }
@@ -707,7 +684,6 @@
         container.innerHTML = html;
     }
 
-    // 初始化加載主頁
     renderMainPage();
 </script>
 
