@@ -20,7 +20,7 @@
             padding: 20px;
         }
         .container {
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
         }
         .header {
@@ -67,7 +67,7 @@
         .record-card h3 {
             margin: 0;
             color: #e17055;
-            font-size: 18px;
+            font-size: 16px;
         }
         .record-card p {
             margin: 0;
@@ -425,7 +425,6 @@
 <script>
     let currentKeyId = '';
 
-    // 開新表單 (建立模式)
     function openNewModal() {
         currentKeyId = 'KEY-' + Math.random().toString(36).substr(2, 9).toUpperCase();
         document.getElementById('displayKeyId').innerText = 'Key ID: ' + currentKeyId;
@@ -439,7 +438,6 @@
         document.getElementById('formModal').classList.add('active');
     }
 
-    // 開編輯模式 (帶入已有資料)
     function openEditModal(keyId) {
         let allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
         let record = allRecords.find(r => r.keyId === keyId);
@@ -489,7 +487,6 @@
         document.getElementById('formModal').classList.remove('active');
     }
 
-    // 刪除指定記錄
     function deleteRecord(keyId, event) {
         if(event) event.stopPropagation();
         if(confirm('確定要刪除呢筆記錄嗎？')) {
@@ -500,7 +497,6 @@
         }
     }
 
-    // 喺 Modal 入面刪除當前編輯中嘅記錄
     function deleteCurrentRecord() {
         if(confirm('確定要刪除呢筆記錄嗎？')) {
             let allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
@@ -564,6 +560,22 @@
         container.appendChild(row);
     }
 
+    function getAgeText(r) {
+        if(r.ageMode === 'number') {
+            return r.ageNumber ? `${r.ageNumber}歲` : '';
+        } else {
+            if(!r.birthDate) return '';
+            const birthDate = new Date(r.birthDate);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return `${age}歲`;
+        }
+    }
+
     function saveData(event) {
         event.preventDefault();
 
@@ -579,7 +591,7 @@
                     keyId: 'KEY-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
                     userName: currentIdRef,
                     userId: currentIdRef,
-                    realName: '未填',
+                    realName: '',
                     autoCreated: true
                 });
             }
@@ -625,13 +637,24 @@
         renderMainPage();
     }
 
-    // 主頁卡片 HTML（只顯示 User Name、IG ID，無頭相，無自動生成標記）
+    // 主頁卡片 HTML，格式嚴格遵從：User Name (User ID) | real name (if any) | age (if any) | current couple
     function createCardHtml(r) {
+        const realNameStr = r.realName ? r.realName : '';
+        const ageStr = getAgeText(r);
+        const coupleStr = r.currentUserId ? `現任: @${r.currentUserId}` : '';
+
+        // 組裝格式部件，只保留有填寫嘅欄位用 | 隔開
+        let parts = [`${r.userName} (@${r.userId})`];
+        if(realNameStr) parts.push(realNameStr);
+        if(ageStr) parts.push(ageStr);
+        if(coupleStr) parts.push(coupleStr);
+
+        const displayText = parts.join(' | ');
+
         return `
             <div class="record-card" onclick="openEditModal('${r.keyId}')">
                 <div class="card-left-info">
-                    <h3>👤 ${r.userName}</h3>
-                    <p>IG ID: @${r.userId}</p>
+                    <h3>👤 ${displayText}</h3>
                 </div>
                 <button class="delete-card-btn" onclick="deleteRecord('${r.keyId}', event)">刪除 🗑️</button>
             </div>
