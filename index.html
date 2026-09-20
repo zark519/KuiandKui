@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人與情侶關係記錄器</title>
+    <style>
+        :root {
+            --primary-color: #ff6b81;
+            --secondary-color: #f1f2f6;
+            --text-color: #2f3542;
+            --border-color: #ced6e0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f7f1e3;
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .key-id-display {
+            font-size: 14px;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        .tabs {
+            display: flex;
+            background: #dfe4ea;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #57606f;
+            transition: 0.3s;
+        }
+        .tab-btn.active {
+            background: #ffffff;
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        input[type="text"], input[type="date"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        .option-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        .option-btn.selected {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+        .dynamic-field {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .remove-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .record-card {
+            background: #f1f2f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 5px solid var(--primary-color);
+        }
+        .record-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #2f3542;
+        }
+        .record-card p {
+            margin: 4px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>個人關係記錄器</h1>
+        <div class="key-id-display" id="displayKeyId">Key ID: 載入中...</div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('formTab')">資料輸入</button>
+        <button class="tab-btn" onclick="switchTab('addInfoTab')">加入新資訊</button>
+        <button class="tab-btn" onclick="switchTab('viewTab')">查看記錄</button>
+    </div>
+
+    <!-- Tab 1: 資料輸入 -->
+    <div id="formTab" class="tab-content active">
+        <form id="profileForm" onsubmit="saveData(event)">
+            <div class="form-group">
+                <label for="userName">User Name (用戶名稱)</label>
+                <input type="text" id="userName" required placeholder="例如：Alex123">
+            </div>
+
+            <div class="form-group">
+                <label for="userId">User ID (系統帳號)</label>
+                <input type="text" id="userId" required placeholder="例如：UID-8888">
+            </div>
+
+            <div class="form-group">
+                <label for="realName">真實姓名</label>
+                <input type="text" id="realName" placeholder="例如：陳大文">
+            </div>
+
+            <div class="form-group">
+                <label>年紀與出生推算 (輸入已知年紀的基準日與當時年紀)</label>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <input type="number" id="inputAge" placeholder="當時年紀" min="0">
+                    </div>
+                    <div style="flex: 2;">
+                        <input type="date" id="inputAgeDate" title="輸入年紀時的日期">
+                    </div>
+                </div>
+                <small style="color: #57606f; display: block; margin-top: 4px;" id="calculatedAgeResult">即時計算結果：-</small>
+            </div>
+
+            <div class="form-group">
+                <label>性向選擇</label>
+                <div class="btn-group">
+                    <button type="button" class="option-btn selected" onclick="setSexuality('直')">直</button>
+                    <button type="button" class="option-btn" onclick="setSexuality('雙')">雙</button>
+                </div>
+                <input type="hidden" id="sexuality" value="直">
+            </div>
+
+            <div class="form-group">
+                <label for="currentUserId">現任 USER ID</label>
+                <input type="text" id="currentUserId" placeholder="輸入現任的 User ID（會自動建立或串連）">
+            </div>
+
+            <div class="form-group">
+                <label>成為情侶時間計算</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 6px;">
+                    <button type="button" class="option-btn selected" id="typeYearsBtn" onclick="switchCoupleInput('years')">輸入交往幾年</button>
+                    <button type="button" class="option-btn" id="typeDateBtn" onclick="switchCoupleInput('date')">輸入在一起年份/日期</button>
+                </div>
+                <div id="coupleYearsWrapper">
+                    <input type="number" id="coupleYearsInput" placeholder="例如：2.5 (代表交往 2.5 年)" step="0.1" min="0">
+                </div>
+                <div id="coupleDateWrapper" style="display: none;">
+                    <input type="date" id="coupleDateInput">
+                </div>
+                <small style="color: #57606f; display: block; margin-top: 4px;" id="calculatedCoupleResult">計算結果：-</small>
+            </div>
+
+            <div class="form-group">
+                <label for="formerUserId">前任 USER ID</label>
+                <input type="text" id="formerUserId" placeholder="輸入前任的 User ID">
+            </div>
+
+            <!-- 動態新增的自訂欄位會顯示在這裡 -->
+            <div id="dynamicFieldsContainer"></div>
+
+            <button type="submit" class="submit-btn">儲存並建立記錄</button>
+        </form>
+    </div>
+
+    <!-- Tab 2: 加入新資訊 -->
+    <div id="addInfoTab" class="tab-content">
+        <h3>自訂新欄位 (例如：生日日期、興趣等)</h3>
+        <p style="font-size: 14px; color: #57606f;">在這裡新增的欄位會直接加到資料輸入頁面中。</p>
+        <div class="form-group">
+            <label for="newFieldName">欄位名稱</label>
+            <input type="text" id="newFieldName" placeholder="例如：生日日期">
+        </div>
+        <div class="form-group">
+            <label for="newFieldType">欄位類型</label>
+            <select id="newFieldType">
+                <option value="date">日期 (Date)</option>
+                <option value="text">文字 (Text)</option>
+                <option value="number">數字 (Number)</option>
+            </select>
+        </div>
+        <button type="button" class="submit-btn" onclick="addNewFieldToForm()">新增欄位到表單</button>
+    </div>
+
+    <!-- Tab 3: 查看記錄 -->
+    <div id="viewTab" class="tab-content">
+        <h3>已儲存的資料記錄</h3>
+        <div id="recordsList">
+            <p style="color: #57606f;">目前尚無記錄。</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 初始化 Key ID (隨機生成唯一識別碼)
+    let currentKeyId = 'KEY-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    document.getElementById('displayKeyId').innerText = 'Key ID: ' + currentKeyId;
+
+    // Tab 切換邏輯
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if(tabId === 'viewTab') {
+            renderRecords();
+        }
+    }
+
+    // 性向選擇切換
+    function setSexuality(val) {
+        const btns = document.querySelectorAll('.form-group .btn-group .option-btn');
+        btns.forEach(b => {
+            if(b.innerText === val) b.classList.add('selected');
+            else b.classList.remove('selected');
+        });
+        document.getElementById('sexuality').value = val;
+    }
+
+    // 情侶輸入模式切換
+    let coupleMode = 'years';
+    function switchCoupleInput(mode) {
+        coupleMode = mode;
+        if(mode === 'years') {
+            document.getElementById('typeYearsBtn').classList.add('selected');
+            document.getElementById('typeDateBtn').classList.remove('selected');
+            document.getElementById('coupleYearsWrapper').style.display = 'block';
+            document.getElementById('coupleDateWrapper').style.display = 'none';
+        } else {
+            document.getElementById('typeDateBtn').classList.add('selected');
+            document.getElementById('typeYearsBtn').classList.remove('selected');
+            document.getElementById('coupleDateWrapper').style.display = 'block';
+            document.getElementById('coupleYearsWrapper').style.display = 'none';
+        }
+    }
+
+    // 動態新增欄位功能
+    let customFieldsDef = [];
+    function addNewFieldToForm() {
+        const fieldName = document.getElementById('newFieldName').value.trim();
+        const fieldType = document.getElementById('newFieldType').value;
+        if(!fieldName) {
+            alert('請輸入欄位名稱');
+            return;
+        }
+
+        const fieldId = 'custom_' + Date.now();
+        customFieldsDef.push({ id: fieldId, name: fieldName, type: fieldType });
+
+        const container = document.getElementById('dynamicFieldsContainer');
+        const div = document.createElement('div');
+        div.className = 'form-group';
+        div.innerHTML = `
+            <label>${fieldName} (自訂)</label>
+            <input type="${fieldType}" id="${fieldId}" placeholder="請輸入 ${fieldName}">
+        `;
+        container.appendChild(div);
+
+        document.getElementById('newFieldName').value = '';
+        alert('欄位已成功加入「資料輸入」頁籤！');
+        switchTab('formTab');
+    }
+
+    // 即時計算年紀與交往時間邏輯
+    document.getElementById('inputAge').addEventListener('input', calculateRealtimeAge);
+    document.getElementById('inputAgeDate').addEventListener('change', calculateRealtimeAge);
+    document.getElementById('coupleYearsInput').addEventListener('input', calculateCoupleTime);
+    document.getElementById('coupleDateInput').addEventListener('change', calculateCoupleTime);
+
+    function calculateRealtimeAge() {
+        const age = parseFloat(document.getElementById('inputAge').value);
+        const ageDateStr = document.getElementById('inputAgeDate').value;
+        if(!isNaN(age) && ageDateStr) {
+            const inputDate = new Date(ageDateStr);
+            const birthYearApprox = inputDate.getFullYear() - age;
+            const today = new Date();
+            let currentAge = today.getFullYear() - birthYearApprox;
+            // 簡易微調
+            document.getElementById('calculatedAgeResult').innerText = `推算出生年份約：${birthYearApprox} 年 | 現今實歲大約：${currentAge} 歲`;
+        } else {
+            document.getElementById('calculatedAgeResult').innerText = '即時計算結果：-';
+        }
+    }
+
+    function calculateCoupleTime() {
+        if(coupleMode === 'years') {
+            const yrs = parseFloat(document.getElementById('coupleYearsInput').value);
+            if(!isNaN(yrs)) {
+                document.getElementById('calculatedCoupleResult').innerText = `已交往共 ${yrs} 年`;
+            } else {
+                document.getElementById('calculatedCoupleResult').innerText = '計算結果：-';
+            }
+        } else {
+            const dateStr = document.getElementById('coupleDateInput').value;
+            if(dateStr) {
+                const startDate = new Date(dateStr);
+                const today = new Date();
+                const diffTime = Math.abs(today - startDate);
+                const diffYears = (diffTime / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1);
+                document.getElementById('calculatedCoupleResult').innerText = `從 ${dateStr} 起算，大約交往了 ${diffYears} 年`;
+            } else {
+                document.getElementById('calculatedCoupleResult').innerText = '計算結果：-';
+            }
+        }
+    }
+
+    // 儲存資料
+    function saveData(event) {
+        event.preventDefault();
+        
+        const userId = document.getElementById('userId').value.trim();
+        const currentIdRef = document.getElementById('currentUserId').value.trim();
+
+        // 模擬檢查現任 User ID 是否存在，若無則自動建立記錄
+        let allRecords = JSON.parse(localStorage.getItem('app_records') || '[]');
+        
+        if(currentIdRef) {
+            let targetCurrent = allRecords.find(r => r.userId === currentIdRef);
+            if(!targetCurrent) {
+                // 自動幫現任建立空白記錄
+                allRecords.push({
+                    keyId: 'KEY-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                    userName: '自動建立用戶',
+                    userId: currentIdRef,
+                    realName: '未知',
+                    autoCreated: true
+                });
+            }
+        }
+
+        // 收集自訂欄位資料
+        let customData = {};
+        customFieldsDef.forEach(f => {
+            const val = document.getElementById(f.id).value;
+            customData[f.name] = val;
+        });
+
+        const formData = {
+            keyId: currentKeyId,
+            userName: document.getElementById('userName').value,
+            userId: userId,
+            realName: document.getElementById('realName').value,
+            sexuality: document.getElementById('sexuality').value,
+            currentUserId: currentIdRef,
+            formerUserId: document.getElementById('formerUserId').value,
+            coupleInfo: coupleMode === 'years' ? document.getElementById('coupleYearsInput').value + ' 年' : document.getElementById('coupleDateInput').value,
+            ageCalc: document.getElementById('calculatedAgeResult').innerText,
+            customFields: customData,
+            createdAt: new Date().toLocaleString()
+        };
+
+        // 覆蓋或新增當前 Key ID 的記錄
+        const existingIdx = allRecords.findIndex(r => r.keyId === currentKeyId);
+        if(existingIdx >= 0) {
+            allRecords[existingIdx] = formData;
+        } else {
+            allRecords.push(formData);
+        }
+
+        localStorage.setItem('app_records', JSON.stringify(allRecords));
+        alert('資料儲存成功！若填寫了現任 User ID 且未存在系統中，已自動為其建立記錄。');
+        renderRecords();
+        switchTab('viewTab');
+    }
+
+    // 渲染已儲存的記錄
+    function renderRecords() {
+        const listDiv = document.getElementById('recordsList');
+        const allRecords = JSON.parse(localStorage.getItem('app_records') || '[]');
+        
+        if(allRecords.length === 0) {
+            listDiv.innerHTML = '<p style="color: #57606f;">目前尚無記錄。</p>';
+            return;
+        }
+
+        let html = '';
+        allRecords.forEach(r => {
+            let customHtml = '';
+            if(r.customFields) {
+                for(let key in r.customFields) {
+                    customHtml += `<p><strong>${key}:</strong> ${r.customFields[key] || '未填寫'}</p>`;
+                }
+            }
+
+            html += `
+                <div class="record-card">
+                    <h3>用戶名稱: ${r.userName} (ID: ${r.userId}) ${r.autoCreated ? '<span style="color:red; font-size:12px;">[自動建立]</span>' : ''}</h3>
+                    <p><strong>Key ID:</strong> ${r.keyId}</p>
+                    <p><strong>真實姓名:</strong> ${r.realName || '未填'}</p>
+                    <p><strong>性向:</strong> ${r.sexuality || '未填'}</p>
+                    <p><strong>現任 User ID:</strong> ${r.currentUserId || '無'}</p>
+                    <p><strong>交往情況:</strong> ${r.coupleInfo || '無'}</p>
+                    <p><strong>前任 User ID:</strong> ${r.formerUserId || '無'}</p>
+                    <p><strong>年紀推算:</strong> ${r.ageCalc}</p>
+                    ${customHtml}
+                    <p style="font-size: 11px; color: #a4b0be; margin-top: 8px;">建立時間: ${r.createdAt || '未知'}</p>
+                </div>
+            `;
+        });
+        listDiv.innerHTML = html;
+    }
+</script>
+
+</body>
+</html>
