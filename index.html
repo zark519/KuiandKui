@@ -47,9 +47,14 @@
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 8px 20px rgba(255, 118, 117, 0.15);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             border: 2px dashed var(--secondary-color);
             position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .record-card:hover {
+            transform: translateY(-3px);
         }
         .record-card h3 {
             margin-top: 0;
@@ -60,6 +65,42 @@
             margin: 8px 0;
             font-size: 14px;
         }
+        /* 情侶配對群組與分隔線 */
+        .couple-group {
+            background: #fff;
+            border-radius: 18px;
+            padding: 10px;
+            box-shadow: 0 6px 15px rgba(255, 118, 117, 0.1);
+            margin-bottom: 20px;
+            border: 2px solid var(--secondary-color);
+        }
+        .couple-divider {
+            text-align: center;
+            margin: 10px 0;
+            position: relative;
+        }
+        .couple-divider::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            right: 10px;
+            height: 2px;
+            background: #fab1a0;
+            z-index: 1;
+        }
+        .couple-divider span {
+            background: #fff1f2;
+            padding: 4px 15px;
+            border-radius: 20px;
+            color: #e17055;
+            font-weight: bold;
+            font-size: 13px;
+            position: relative;
+            z-index: 2;
+            border: 1px dashed var(--primary-color);
+        }
+
         .empty-state {
             text-align: center;
             padding: 40px;
@@ -246,13 +287,13 @@
     </div>
 
     <!-- 右下角 + 浮動按鈕 -->
-    <button class="fab" onclick="openModal()">+</button>
+    <button class="fab" onclick="openNewModal()">+</button>
 
     <!-- Modal 彈出填寫表單 -->
     <div class="modal" id="formModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📝 填下/修改你嘅資料</h2>
+                <h2 id="modalTitle">📝 填下/修改你嘅資料</h2>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             
@@ -272,9 +313,19 @@
                     <input type="text" id="realName" placeholder="例如：陳大文">
                 </div>
 
+                <!-- 生日或歲數 (選填) -->
                 <div class="form-group">
-                    <label>🎂 出生日期（系統會識得幫你自動計住現時幾多歲架！）</label>
-                    <input type="date" id="birthDate" required>
+                    <label>🎂 年齡 / 出生日期（選填）</label>
+                    <div class="btn-group" style="margin-bottom: 6px;">
+                        <button type="button" class="option-btn selected" id="typeAgeNumBtn" onclick="switchAgeInput('number')">直接填歲數</button>
+                        <button type="button" class="option-btn" id="typeAgeDateBtn" onclick="switchAgeInput('date')">填出生日期</button>
+                    </div>
+                    <div id="ageNumberWrapper">
+                        <input type="number" id="ageNumberInput" placeholder="例如：25 (歲)" min="0" max="150">
+                    </div>
+                    <div id="ageDateWrapper" style="display: none;">
+                        <input type="date" id="birthDate">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -311,7 +362,7 @@
                     <input type="text" id="formerUserId" placeholder="輸入前任 User ID">
                 </div>
 
-                <!-- 喺前任 USER ID 下面加新資訊按鈕 -->
+                <!-- 額外自訂資訊行 -->
                 <div style="margin-top: 15px; border-top: 2px dashed #dfe6e9; padding-top: 15px;">
                     <label>💡 想加多啲其他資料？（例如：星座、IG、生日等）</label>
                     <div id="dynamicRowsContainer"></div>
@@ -325,16 +376,88 @@
 </div>
 
 <script>
-    // 自動生成獨一無二嘅 Key ID
-    let currentKeyId = 'KEY-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-    document.getElementById('displayKeyId').innerText = 'Key ID: ' + currentKeyId;
+    let currentKeyId = '';
 
-    // Modal 開關控制
-    function openModal() {
+    // 開新表單 (建立模式)
+    function openNewModal() {
+        currentKeyId = 'KEY-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        document.getElementById('displayKeyId').innerText = 'Key ID: ' + currentKeyId;
+        document.getElementById('modalTitle').innerText = '📝 新增個人檔案';
+        document.getElementById('profileForm').reset();
+        document.getElementById('dynamicRowsContainer').innerHTML = '';
+        setSexuality('Gay');
+        switchAgeInput('number');
+        switchCoupleInput('years');
         document.getElementById('formModal').classList.add('active');
     }
+
+    // 開編輯模式 (帶入已有資料)
+    function openEditModal(keyId) {
+        let allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
+        let record = allRecords.find(r => r.keyId === keyId);
+        if(!record) return;
+
+        currentKeyId = record.keyId;
+        document.getElementById('displayKeyId').innerText = 'Key ID: ' + currentKeyId;
+        document.getElementById('modalTitle').innerText = '✏️ 編輯個人檔案';
+
+        document.getElementById('userName').value = record.userName || '';
+        document.getElementById('userId').value = record.userId || '';
+        document.getElementById('realName').value = record.realName || '';
+        document.getElementById('currentUserId').value = record.currentUserId || '';
+        document.getElementById('formerUserId').value = record.formerUserId || '';
+
+        //年齡或生日
+        if(record.ageMode === 'date') {
+            switchAgeInput('date');
+            document.getElementById('birthDate').value = record.birthDate || '';
+        } else {
+            switchAgeInput('number');
+            document.getElementById('ageNumberInput').value = record.ageNumber || '';
+        }
+
+        setSexuality(record.sexuality || 'Gay');
+
+        //拍拖模式
+        if(record.coupleMode === 'date') {
+            switchCoupleInput('date');
+            document.getElementById('coupleDateInput').value = record.coupleDate || '';
+        } else {
+            switchCoupleInput('years');
+            document.getElementById('coupleYearsInput').value = record.coupleYears || '';
+        }
+
+        // 自訂欄位
+        const container = document.getElementById('dynamicRowsContainer');
+        container.innerHTML = '';
+        if(record.customFields && record.customFields.length > 0) {
+            record.customFields.forEach(cf => {
+                addCustomRow(cf.nature, cf.info);
+            });
+        }
+
+        document.getElementById('formModal').classList.add('active');
+    }
+
     function closeModal() {
         document.getElementById('formModal').classList.remove('active');
+    }
+
+    // 年齡輸入模式切換
+    let ageMode = 'number';
+    function switchAgeInput(mode) {
+        ageMode = mode;
+        if(mode === 'number') {
+            document.getElementById('typeAgeNumBtn').classList.add('selected');
+            document.getElementById('typeAgeDateBtn').classList.remove('selected');
+            document.getElementById('ageNumberWrapper').style.display = 'block';
+            document.getElementById('ageDateWrapper').style.display = 'none';
+        } else {
+            document.getElementById('typeAgeDateBtn').classList.add('selected');
+            document.getElementById('typeAgeNumBtn').classList.remove('selected');
+            document.getElementById('ageDateWrapper').style.display = 'block';
+            document.getElementById('ageNumberWrapper').style.display = 'none';
+        }
     }
 
     // 性向掣切換
@@ -364,7 +487,7 @@
         }
     }
 
-    // 動態新增欄位行 (左邊性質，右邊資料)
+    // 動態新增欄位行
     function addCustomRow(nature = '', info = '') {
         const container = document.getElementById('dynamicRowsContainer');
         const row = document.createElement('div');
@@ -377,17 +500,21 @@
         container.appendChild(row);
     }
 
-    // 計算現正年紀（隨住時間過去會自動更新）
-    function calculateAge(birthDateStr) {
-        if (!birthDateStr) return '未知';
-        const birthDate = new Date(birthDateStr);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
+    // 計算年齡文字
+    function getAgeText(mode, numVal, dateVal) {
+        if(mode === 'number') {
+            return numVal ? `${numVal} 歲` : '未填';
+        } else {
+            if (!dateVal) return '未填';
+            const birthDate = new Date(dateVal);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return `${age} 歲 (出生於 ${dateVal})`;
         }
-        return age + ' 歲';
     }
 
     // 計算拍拖相處時間
@@ -410,13 +537,10 @@
 
         const userId = document.getElementById('userId').value.trim();
         const currentIdRef = document.getElementById('currentUserId').value.trim();
-        const birthDateVal = document.getElementById('birthDate').value;
-        const coupleYearsVal = document.getElementById('coupleYearsInput').value;
-        const coupleDateVal = document.getElementById('coupleDateInput').value;
-
+        
         let allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
 
-        // 如果填咗現任 User ID 但搵唔到，自動幫手建立個吉嘅記錄（Auto-link）
+        // 如果填咗現任 User ID 但搵唔到，自動幫手建立吉嘅記錄
         if(currentIdRef) {
             let targetCurrent = allRecords.find(r => r.userId === currentIdRef);
             if(!targetCurrent) {
@@ -430,7 +554,6 @@
             }
         }
 
-        // 收集自訂行資料 (左邊性質，右邊資料)
         let customFieldsList = [];
         document.querySelectorAll('.custom-row').forEach(row => {
             const nature = row.querySelector('.custom-nature').value.trim();
@@ -445,12 +568,14 @@
             userName: document.getElementById('userName').value,
             userId: userId,
             realName: document.getElementById('realName').value,
-            birthDate: birthDateVal,
+            ageMode: ageMode,
+            ageNumber: document.getElementById('ageNumberInput').value,
+            birthDate: document.getElementById('birthDate').value,
             sexuality: document.getElementById('sexuality').value,
             currentUserId: currentIdRef,
             coupleMode: coupleMode,
-            coupleYears: coupleYearsVal,
-            coupleDate: coupleDateVal,
+            coupleYears: document.getElementById('coupleYearsInput').value,
+            coupleDate: document.getElementById('coupleDateInput').value,
             formerUserId: document.getElementById('formerUserId').value,
             customFields: customFieldsList,
             updatedAt: new Date().toLocaleString()
@@ -469,7 +594,35 @@
         renderMainPage();
     }
 
-    // 主頁面展示記錄
+    // 生成卡片 HTML
+    function createCardHtml(r) {
+        const ageText = getAgeText(r.ageMode, r.ageNumber, r.birthDate);
+        const coupleText = getCoupleTimeText(r.coupleMode, r.coupleYears, r.coupleDate);
+
+        let customHtml = '';
+        if(r.customFields && r.customFields.length > 0) {
+            r.customFields.forEach(cf => {
+                customHtml += `<p><strong>${cf.nature}：</strong> ${cf.info}</p>`;
+            });
+        }
+
+        return `
+            <div class="record-card" onclick="openEditModal('${r.keyId}')">
+                <h3>👤 ${r.userName} (ID: ${r.userId}) ${r.autoCreated ? '<span style="color:#ff7675; font-size:12px;">[自動建立]</span>' : ''}</h3>
+                <p><strong>🔑 Key ID：</strong> ${r.keyId}</p>
+                <p><strong>📛 真實姓名：</strong> ${r.realName || '未填'}</p>
+                <p><strong>👶 年齡：</strong> ${ageText}</p>
+                <p><strong>🌈 性向：</strong> ${r.sexuality || '未填'}</p>
+                <p><strong>❤️ 現任 User ID：</strong> ${r.currentUserId || '冇'}</p>
+                <p><strong>🥰 拍拖狀態：</strong> ${coupleText}</p>
+                <p><strong>💔 前任 User ID：</strong> ${r.formerUserId || '冇'}</p>
+                ${customHtml}
+                <p style="font-size: 11px; color: #b2bec3; text-align: right; margin-top: 10px;">(點擊卡片可進入編輯 ✏️)</p>
+            </div>
+        `;
+    }
+
+    // 主頁面展示記錄（情侶互相對應自動拼埋一齊）
     function renderMainPage() {
         const container = document.getElementById('recordsContainer');
         const allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
@@ -484,33 +637,37 @@
             return;
         }
 
+        let processedIds = new Set();
         let html = '';
-        allRecords.forEach(r => {
-            const ageText = calculateAge(r.birthDate);
-            const coupleText = getCoupleTimeText(r.coupleMode, r.coupleYears, r.coupleDate);
 
-            let customHtml = '';
-            if(r.customFields && r.customFields.length > 0) {
-                r.customFields.forEach(cf => {
-                    customHtml += `<p><strong>${cf.nature}：</strong> ${cf.info}</p>`;
-                });
+        allRecords.forEach(r => {
+            if(processedIds.has(r.keyId)) return;
+
+            // 檢查有冇互相連到嘅情侶
+            let partner = null;
+            if(r.currentUserId) {
+                partner = allRecords.find(p => p.userId === r.currentUserId && p.keyId !== r.keyId && p.currentUserId === r.userId);
             }
 
-            html += `
-                <div class="record-card">
-                    <h3>👤 ${r.userName} (ID: ${r.userId}) ${r.autoCreated ? '<span style="color:#ff7675; font-size:12px;">[自動建立]</span>' : ''}</h3>
-                    <p><strong>🔑 Key ID：</strong> ${r.keyId}</p>
-                    <p><strong>📛 真實姓名：</strong> ${r.realName || '未填'}</p>
-                    <p><strong>👶 現時年紀：</strong> ${ageText} (出生日期: ${r.birthDate || '未填'})</p>
-                    <p><strong>🌈 性向：</strong> ${r.sexuality || '未填'}</p>
-                    <p><strong>❤️ 現任 User ID：</strong> ${r.currentUserId || '冇'}</p>
-                    <p><strong>🥰 拍拖狀態：</strong> ${coupleText}</p>
-                    <p><strong>💔 前任 User ID：</strong> ${r.formerUserId || '冇'}</p>
-                    ${customHtml}
-                    <p style="font-size: 11px; color: #b2bec3; text-align: right; margin-top: 10px;">更新時間: ${r.updatedAt || '未知'}</p>
-                </div>
-            `;
+            if(partner) {
+                // 兩個人成雙成對，夾埋一齊顯示
+                processedIds.add(r.keyId);
+                processedIds.add(partner.keyId);
+
+                html += `
+                    <div class="couple-group">
+                        ${createCardHtml(r)}
+                        <div class="couple-divider"><span>💖 Sweet Couple 💖</span></div>
+                        ${createCardHtml(partner)}
+                    </div>
+                `;
+            } else {
+                // 單獨顯示
+                processedIds.add(r.keyId);
+                html += createCardHtml(r);
+            }
         });
+
         container.innerHTML = html;
     }
 
