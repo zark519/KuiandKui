@@ -45,26 +45,28 @@
         .record-card {
             background: var(--card-bg);
             border-radius: 16px;
-            padding: 20px;
+            padding: 15px 20px;
             box-shadow: 0 8px 20px rgba(255, 118, 117, 0.15);
             margin-bottom: 15px;
             border: 2px dashed var(--secondary-color);
             position: relative;
             cursor: pointer;
             transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         .record-card:hover {
             transform: translateY(-3px);
         }
-        .card-header-flex {
+        .card-left-info {
             display: flex;
             align-items: center;
             gap: 15px;
-            margin-bottom: 12px;
         }
         .avatar-img {
-            width: 60px;
-            height: 60px;
+            width: 55px;
+            height: 55px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid var(--primary-color);
@@ -76,9 +78,25 @@
             font-size: 18px;
         }
         .record-card p {
-            margin: 6px 0;
-            font-size: 14px;
+            margin: 0;
+            font-size: 13px;
+            color: #636e72;
         }
+        .delete-card-btn {
+            background: #ff7675;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+        .delete-card-btn:hover {
+            opacity: 0.8;
+        }
+
         /* 情侶配對群組與分隔線 */
         .couple-group {
             background: #fff;
@@ -267,8 +285,13 @@
             font-weight: bold;
             margin-bottom: 14px;
         }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
         .submit-btn {
-            width: 100%;
+            flex: 2;
             padding: 12px;
             background-color: var(--primary-color);
             color: white;
@@ -278,9 +301,22 @@
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(255, 118, 117, 0.3);
-            margin-top: 10px;
         }
         .submit-btn:hover {
+            opacity: 0.9;
+        }
+        .delete-btn-modal {
+            flex: 1;
+            padding: 12px;
+            background-color: #d63031;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .delete-btn-modal:hover {
             opacity: 0.9;
         }
     </style>
@@ -383,7 +419,10 @@
                     <button type="button" class="add-row-btn" onclick="addCustomRow()">＋ 加多個資料欄位</button>
                 </div>
 
-                <button type="submit" class="submit-btn">儲存記錄 💖</button>
+                <div class="form-actions">
+                    <button type="button" class="delete-btn-modal" id="modalDeleteBtn" onclick="deleteCurrentRecord()">刪除記錄 🗑️</button>
+                    <button type="submit" class="submit-btn">儲存記錄 💖</button>
+                </div>
             </form>
         </div>
     </div>
@@ -399,6 +438,7 @@
         document.getElementById('modalTitle').innerText = '📝 新增個人檔案';
         document.getElementById('profileForm').reset();
         document.getElementById('dynamicRowsContainer').innerHTML = '';
+        document.getElementById('modalDeleteBtn').style.display = 'none'; // 新增時隱藏刪除掣
         setSexuality('Gay');
         switchAgeInput('number');
         switchCoupleInput('years');
@@ -414,6 +454,7 @@
         currentKeyId = record.keyId;
         document.getElementById('displayKeyId').innerText = 'Key ID: ' + currentKeyId;
         document.getElementById('modalTitle').innerText = '✏️ 編輯個人檔案';
+        document.getElementById('modalDeleteBtn').style.display = 'block'; // 編輯時顯示刪除掣
 
         document.getElementById('userName').value = record.userName || '';
         document.getElementById('userId').value = record.userId || '';
@@ -455,6 +496,28 @@
 
     function closeModal() {
         document.getElementById('formModal').classList.remove('active');
+    }
+
+    // 刪除指定記錄
+    function deleteRecord(keyId, event) {
+        if(event) event.stopPropagation(); // 阻止觸發卡片嘅 onclick 編輯事件
+        if(confirm('確定要刪除呢筆記錄嗎？')) {
+            let allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
+            allRecords = allRecords.filter(r => r.keyId !== keyId);
+            localStorage.setItem('app_records_cute', JSON.stringify(allRecords));
+            renderMainPage();
+        }
+    }
+
+    // 喺 Modal 入面刪除當前編輯中嘅記錄
+    function deleteCurrentRecord() {
+        if(confirm('確定要刪除呢筆記錄嗎？')) {
+            let allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
+            allRecords = allRecords.filter(r => r.keyId !== currentKeyId);
+            localStorage.setItem('app_records_cute', JSON.stringify(allRecords));
+            closeModal();
+            renderMainPage();
+        }
     }
 
     // 年齡輸入模式切換
@@ -514,37 +577,6 @@
         container.appendChild(row);
     }
 
-    // 計算年齡文字
-    function getAgeText(mode, numVal, dateVal) {
-        if(mode === 'number') {
-            return numVal ? `${numVal} 歲` : '未填';
-        } else {
-            if (!dateVal) return '未填';
-            const birthDate = new Date(dateVal);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const m = today.getMonth() - birthDate.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-            return `${age} 歲 (出生於 ${dateVal})`;
-        }
-    }
-
-    // 計算拍拖相處時間
-    function getCoupleTimeText(mode, yearsVal, dateVal) {
-        if(mode === 'years') {
-            return yearsVal ? `已經一齊咗 ${yearsVal} 年` : '未填資料';
-        } else {
-            if(!dateVal) return '未填資料';
-            const startDate = new Date(dateVal);
-            const today = new Date();
-            const diffTime = Math.abs(today - startDate);
-            const diffYears = (diffTime / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1);
-            return `由 ${dateVal} 開始，一齊咗大約 ${diffYears} 年`;
-        }
-    }
-
     // 儲存資料
     function saveData(event) {
         event.preventDefault();
@@ -554,7 +586,6 @@
         
         let allRecords = JSON.parse(localStorage.getItem('app_records_cute') || '[]');
 
-        // 如果填咗現任 IG ID 但搵唔到，自動幫手建立吉嘅記錄
         if(currentIdRef) {
             let targetCurrent = allRecords.find(r => r.userId === currentIdRef);
             if(!targetCurrent) {
@@ -608,42 +639,21 @@
         renderMainPage();
     }
 
-    // 生成卡片 HTML (自動串接 IG 頭相)
+    // 生成主頁卡片 HTML（只顯示 User Name、IG ID 同頭相，其餘隱藏，並附帶刪除掣）
     function createCardHtml(r) {
-        const ageText = getAgeText(r.ageMode, r.ageNumber, r.birthDate);
-        const coupleText = getCoupleTimeText(r.coupleMode, r.coupleYears, r.coupleDate);
-        
-        // 利用公開代理或者 fallback 預設頭相去自動顯示 IG 大頭貼
-        // 註：若用戶帳號有效，會自動透過拉取公共解析源顯示頭相
-        const igAvatarUrl = r.userId ? `https://images.weserv.nl/?url=https://www.instagram.com/${r.userId}/channel/?__a=1` : ''; 
-        // 為了確保前端穩定顯示，這裡使用一套公開嘅 IG 頭相代理 API 規則
+        // 使用更穩定的 unavatar 服務，若抓取失敗自動轉為預設頭相
         const avatarDisplayUrl = r.userId ? `https://unavatar.io/instagram/${r.userId}` : 'https://via.placeholder.com/60?text=IG';
-
-        let customHtml = '';
-        if(r.customFields && r.customFields.length > 0) {
-            r.customFields.forEach(cf => {
-                customHtml += `<p><strong>${cf.nature}：</strong> ${cf.info}</p>`;
-            });
-        }
 
         return `
             <div class="record-card" onclick="openEditModal('${r.keyId}')">
-                <div class="card-header-flex">
+                <div class="card-left-info">
                     <img src="${avatarDisplayUrl}" class="avatar-img" alt="Avatar" onerror="this.src='https://via.placeholder.com/60?text=IG'">
                     <div>
                         <h3>👤 ${r.userName}</h3>
-                        <p style="margin: 0; font-size: 13px; color: #e17055;">IG ID: @${r.userId} ${r.autoCreated ? '<span style="color:#ff7675; font-size:11px;">[自動建立]</span>' : ''}</p>
+                        <p>IG ID: @${r.userId} ${r.autoCreated ? '<span style="color:#ff7675; font-size:11px;">[自動建立]</span>' : ''}</p>
                     </div>
                 </div>
-                <p><strong>🔑 Key ID：</strong> ${r.keyId}</p>
-                <p><strong>📛 真實姓名：</strong> ${r.realName || '未填'}</p>
-                <p><strong>👶 年齡：</strong> ${ageText}</p>
-                <p><strong>🌈 性向：</strong> ${r.sexuality || '未填'}</p>
-                <p><strong>❤️ 現任 IG ID：</strong> ${r.currentUserId ? '@' + r.currentUserId : '冇'}</p>
-                <p><strong>🥰 拍拖狀態：</strong> ${coupleText}</p>
-                <p><strong>💔 前任 IG ID：</strong> ${r.formerUserId ? '@' + r.formerUserId : '冇'}</p>
-                ${customHtml}
-                <p style="font-size: 11px; color: #b2bec3; text-align: right; margin-top: 10px;">(點擊卡片可進入編輯 ✏️)</p>
+                <button class="delete-card-btn" onclick="deleteRecord('${r.keyId}', event)">刪除 🗑️</button>
             </div>
         `;
     }
